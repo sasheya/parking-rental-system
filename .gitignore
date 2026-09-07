@@ -1,0 +1,28 @@
+# Maven
+target/
+*.class
+
+# IDE
+.settings/
+.project
+.classpath
+.idea/
+*.iml
+.vscode/
+
+# Node/React
+node_modules/
+dist/
+build/
+
+# Env & secrets
+.env
+*.pem
+infra/keys/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
