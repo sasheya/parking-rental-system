@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.parking.payment_service.client.BookingServiceClient;
+import com.parking.payment_service.client.BookingResponse;
 import com.parking.payment_service.client.BookingStatusUpdateRequest;
 import com.parking.payment_service.dto.PaymentConfirmRequest;
 import com.parking.payment_service.dto.PaymentIntentRequest;
@@ -24,6 +25,7 @@ import com.stripe.model.Event;
 import com.stripe.model.PaymentIntent;
 import com.stripe.net.Webhook;
 import com.stripe.param.PaymentIntentCreateParams;
+import com.stripe.param.RefundCreateParams;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +46,9 @@ public class PaymentServiceImpl implements PaymentService {
     @Value("${stripe.webhook-secret:#{null}}")
     private String stripeWebhookSecret;
 
+    @Value("${internal.service-secret:}")
+    private String internalServiceSecret;
+
     @PostConstruct
     public void initStripe() {
         if (stripeSecretKey != null && !stripeSecretKey.isBlank()) {
@@ -57,6 +62,14 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentIntentResponse createPaymentIntent(Long userId, PaymentIntentRequest request) {
+        BookingResponse booking = bookingServiceClient.getBooking(request.getBookingId(), internalServiceSecret);
+        if (booking == null || !userId.equals(booking.getUserId())) {
+            throw new IllegalArgumentException("Booking does not belong to the authenticated user");
+        }
+        if (booking.getTotalAmount() == null || booking.getTotalAmount().compareTo(request.getAmount()) != 0) {
+            throw new IllegalArgumentException("Payment amount does not match the booking amount");
+        }
+
         String currency = request.getCurrency() != null ? request.getCurrency().toLowerCase() : "usd";
         long amountInCents = request.getAmount().multiply(BigDecimal.valueOf(100)).longValue();
 
@@ -112,6 +125,25 @@ public class PaymentServiceImpl implements PaymentService {
         Transaction transaction = transactionRepository.findByPaymentIntentId(request.getPaymentIntentId())
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found for payment intent ID: " + request.getPaymentIntentId()));
 
+        if (!userId.equals(transaction.getUserId())) {
+            throw new IllegalArgumentException("Transaction does not belong to the authenticated user");
+        }
+
+        if (stripeSecretKey != null && !stripeSecretKey.isBlank()
+                && request.getPaymentIntentId() != null
+                && !request.getPaymentIntentId().startsWith("pi_mock_")) {
+            try {
+                PaymentIntent intent = PaymentIntent.retrieve(request.getPaymentIntentId());
+                if (!"succeeded".equals(intent.getStatus())) {
+                    throw new IllegalArgumentException("Payment intent has not succeeded");
+                }
+            } catch (IllegalArgumentException exception) {
+                throw exception;
+            } catch (Exception exception) {
+                throw new IllegalStateException("Could not verify payment with Stripe", exception);
+            }
+        }
+
         transaction.setStatus(TransactionStatus.SUCCESS);
         if (request.getPaymentMethod() != null) {
             transaction.setPaymentMethod(request.getPaymentMethod());
@@ -121,6 +153,7 @@ public class PaymentServiceImpl implements PaymentService {
         try {
             bookingServiceClient.updateBookingStatus(
                     transaction.getBookingId(),
+                    internalServiceSecret,
                     BookingStatusUpdateRequest.builder()
                             .status("CONFIRMED")
                             .remarks("Payment confirmed via transaction ID: " + transaction.getId())
@@ -143,6 +176,37 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public PaymentIntentResponse getTransactionById(Long transactionId) {
+        return mapToResponse(transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new IllegalArgumentException("Transaction not found with ID: " + transactionId)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaymentIntentResponse getTransactionByBookingIdForUser(Long userId, Long bookingId) {
+        PaymentIntentResponse response = getTransactionByBookingId(bookingId);
+        assertOwner(userId, response.getTransactionId());
+        return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaymentIntentResponse getTransactionByIdForUser(Long userId, Long transactionId) {
+        PaymentIntentResponse response = getTransactionById(transactionId);
+        assertOwner(userId, transactionId);
+        return response;
+    }
+
+    private void assertOwner(Long userId, Long transactionId) {
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new IllegalArgumentException("Transaction not found with ID: " + transactionId));
+        if (!userId.equals(transaction.getUserId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Transaction belongs to another user");
+        }
+    }
+
+    @Override
     @Transactional
     public RefundResponse processRefund(Long userId, RefundRequest request) {
         Transaction transaction = transactionRepository.findById(request.getTransactionId())
@@ -151,8 +215,36 @@ public class PaymentServiceImpl implements PaymentService {
         if (transaction.getStatus() != TransactionStatus.SUCCESS) {
             throw new IllegalArgumentException("Cannot refund transaction in status: " + transaction.getStatus());
         }
+        if (!userId.equals(transaction.getUserId())) {
+            throw new IllegalArgumentException("Transaction does not belong to the authenticated user");
+        }
+        if (request.getAmount().compareTo(transaction.getAmount()) > 0) {
+            throw new IllegalArgumentException("Refund amount cannot exceed the transaction amount");
+        }
 
-        String stripeRefundId = "re_mock_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        BigDecimal alreadyRefunded = refundRepository.findByTransactionId(transaction.getId()).stream()
+                .map(Refund::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (alreadyRefunded.add(request.getAmount()).compareTo(transaction.getAmount()) > 0) {
+            throw new IllegalArgumentException("Cumulative refunds cannot exceed the transaction amount");
+        }
+
+        String stripeRefundId;
+        if (stripeSecretKey != null && !stripeSecretKey.isBlank()
+                && transaction.getPaymentIntentId() != null
+                && !transaction.getPaymentIntentId().startsWith("pi_mock_")) {
+            try {
+                RefundCreateParams params = RefundCreateParams.builder()
+                        .setPaymentIntent(transaction.getPaymentIntentId())
+                        .setAmount(request.getAmount().movePointRight(2).longValueExact())
+                        .build();
+                stripeRefundId = com.stripe.model.Refund.create(params).getId();
+            } catch (Exception exception) {
+                throw new IllegalStateException("Could not create Stripe refund", exception);
+            }
+        } else {
+            stripeRefundId = "re_mock_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        }
         Refund refund = Refund.builder()
                 .transactionId(transaction.getId())
                 .amount(request.getAmount())
@@ -168,6 +260,7 @@ public class PaymentServiceImpl implements PaymentService {
         try {
             bookingServiceClient.updateBookingStatus(
                     transaction.getBookingId(),
+                    internalServiceSecret,
                     BookingStatusUpdateRequest.builder()
                             .status("CANCELLED")
                             .remarks("Booking refunded via refund ID: " + refund.getId())
@@ -186,12 +279,10 @@ public class PaymentServiceImpl implements PaymentService {
     public void handleStripeEvent(String payload, String sigHeader) {
         try {
             Event event;
-            if (stripeWebhookSecret != null && !stripeWebhookSecret.isBlank()) {
-                event = Webhook.constructEvent(payload, sigHeader, stripeWebhookSecret);
-            } else {
-                log.info("Stripe webhook secret not configured. Skipping signature verification.");
-                return;
+            if (stripeWebhookSecret == null || stripeWebhookSecret.isBlank()) {
+                throw new IllegalStateException("Stripe webhook secret is not configured");
             }
+            event = Webhook.constructEvent(payload, sigHeader, stripeWebhookSecret);
 
             if ("payment_intent.succeeded".equals(event.getType())) {
                 PaymentIntent intent = (PaymentIntent) event.getDataObjectDeserializer().getObject().orElse(null);
@@ -200,7 +291,7 @@ public class PaymentServiceImpl implements PaymentService {
                 }
             }
         } catch (Exception e) {
-            log.error("Error processing Stripe webhook event", e);
+            throw new IllegalArgumentException("Invalid Stripe webhook", e);
         }
     }
 
@@ -211,6 +302,7 @@ public class PaymentServiceImpl implements PaymentService {
             try {
                 bookingServiceClient.updateBookingStatus(
                         tx.getBookingId(),
+                    internalServiceSecret,
                         BookingStatusUpdateRequest.builder()
                                 .status("CONFIRMED")
                                 .remarks("Payment confirmed via webhook for payment intent: " + paymentIntentId)

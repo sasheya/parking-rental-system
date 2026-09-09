@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
     parking_space_id BIGINT NOT NULL,
+    slot_id BIGINT NOT NULL,
     vehicle_id BIGINT,
     start_time DATETIME NOT NULL,
     end_time DATETIME NOT NULL,

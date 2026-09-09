@@ -18,6 +18,7 @@ public class BookingResponse {
     private Long id;
     private Long userId;
     private Long parkingSpaceId;
+    private Long slotId;
     private Long vehicleId;
     private LocalDateTime startTime;
     private LocalDateTime endTime;

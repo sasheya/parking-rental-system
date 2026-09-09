@@ -1,0 +1,99 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  eureka-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args: { SERVICE: eureka-server }
+    ports: ["8761:8761"]
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args: { SERVICE: api-gateway }
+    environment:
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?Set JWT_PUBLIC_KEY}
+    ports: ["8080:8080"]
+    depends_on: [eureka-server]
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args: { SERVICE: auth-service }
+    environment:
+      DB_HOST: mysql
+      DB_NAME: parking_auth_db
+      DB_USER: root
+      DB_PASS: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:?Set JWT_PRIVATE_KEY}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?Set JWT_PUBLIC_KEY}
+    depends_on:
+      mysql: { condition: service_healthy }
+      eureka-server: { condition: service_started }
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args: { SERVICE: user-service }
+    environment: &db-env
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASS: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?Set JWT_PUBLIC_KEY}
+    depends_on: [mysql, eureka-server]
+
+  parking-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args: { SERVICE: parking-service }
+    environment:
+      <<: *db-env
+      DB_NAME: parking_db
+    depends_on: [mysql, eureka-server]
+
+  booking-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args: { SERVICE: booking-service }
+    environment:
+      <<: *db-env
+      DB_NAME: parking_booking_db
+    depends_on: [mysql, eureka-server, parking-service]
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args: { SERVICE: payment-service }
+    environment:
+      <<: *db-env
+      DB_NAME: parking_payment_db
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    depends_on: [mysql, eureka-server, booking-service]
+
+  frontend:
+    build: ./frontend
+    ports: ["5173:80"]
+    depends_on: [api-gateway]
+
+volumes:
+  mysql-data:

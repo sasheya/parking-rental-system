@@ -17,6 +17,9 @@ public class CreateBookingRequest {
     @NotNull(message = "Parking space ID is required")
     private Long parkingSpaceId;
 
+    @NotNull(message = "Availability slot ID is required")
+    private Long slotId;
+
     private Long vehicleId;
 
     @NotNull(message = "Start time is required")

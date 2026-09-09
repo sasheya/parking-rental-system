@@ -33,9 +33,15 @@ public class AvailabilityServiceImpl implements AvailabilityService {
 
     @Override
     @Transactional
-    public AvailabilitySlotDTO createSlot(Long spaceId, AvailabilitySlotDTO dto) {
+    public AvailabilitySlotDTO createSlot(Long ownerId, Long spaceId, AvailabilitySlotDTO dto) {
         ParkingSpace space = spaceRepository.findById(spaceId)
                 .orElseThrow(() -> new IllegalArgumentException("Parking space not found with ID: " + spaceId));
+        if (!space.getOwnerId().equals(ownerId)) {
+            throw new IllegalArgumentException("Unauthorized: parking space does not belong to the authenticated owner");
+        }
+        if (dto.getStartTime() == null || dto.getEndTime() == null || !dto.getEndTime().isAfter(dto.getStartTime())) {
+            throw new IllegalArgumentException("Availability end time must be after start time");
+        }
 
         AvailabilitySlot slot = AvailabilitySlot.builder()
                 .parkingSpaceId(space.getId())
@@ -54,6 +60,10 @@ public class AvailabilityServiceImpl implements AvailabilityService {
     public void updateSlotStatus(Long slotId, boolean isBooked) {
         AvailabilitySlot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new IllegalArgumentException("Availability slot not found with ID: " + slotId));
+
+        if (Boolean.TRUE.equals(slot.getIsBooked()) == isBooked) {
+            return;
+        }
 
         slot.setIsBooked(isBooked);
         slotRepository.save(slot);

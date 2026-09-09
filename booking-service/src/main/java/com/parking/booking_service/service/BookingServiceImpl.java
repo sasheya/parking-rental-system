@@ -8,10 +8,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.parking.booking_service.client.ParkingServiceClient;
 import com.parking.booking_service.client.ParkingSpaceResponse;
+import com.parking.booking_service.client.AvailabilitySlotResponse;
 import com.parking.booking_service.dto.BookingResponse;
 import com.parking.booking_service.dto.BookingStatusUpdateRequest;
 import com.parking.booking_service.dto.CreateBookingRequest;
@@ -33,6 +35,9 @@ public class BookingServiceImpl implements BookingService {
     private final BookingStatusHistoryRepository historyRepository;
     private final ParkingServiceClient parkingServiceClient;
 
+    @Value("${internal.service-secret:}")
+    private String internalServiceSecret;
+
     @Override
     @Transactional
     public BookingResponse createBooking(Long userId, CreateBookingRequest request) {
@@ -46,30 +51,54 @@ public class BookingServiceImpl implements BookingService {
 
         ParkingSpaceResponse space = null;
         try {
-            space = parkingServiceClient.getSpaceById(request.getParkingSpaceId());
+            space = parkingServiceClient.getSpaceById(request.getParkingSpaceId(), internalServiceSecret);
         } catch (Exception e) {
-            log.warn("Could not verify parking space from Parking Service via Feign", e);
+            throw new IllegalStateException("Parking service is unavailable; booking cannot be created", e);
         }
 
-        BigDecimal pricePerHour = (space != null && space.getPricePerHour() != null)
-                ? space.getPricePerHour()
-                : BigDecimal.valueOf(10.00); // Fallback standard rate
+        if (space == null || !Boolean.TRUE.equals(space.getActive())) {
+            throw new IllegalArgumentException("Parking space is not available");
+        }
+        if (space.getPricePerHour() == null || space.getPricePerHour().signum() < 0) {
+            throw new IllegalStateException("Parking space has no valid price");
+        }
+        if (space.getAvailableSlots() == null || space.getAvailableSlots() <= 0) {
+            throw new IllegalStateException("Parking space has no available slots");
+        }
+
+        AvailabilitySlotResponse slot = parkingServiceClient.getAvailability(request.getParkingSpaceId(), internalServiceSecret).stream()
+                .filter(candidate -> request.getSlotId().equals(candidate.getId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Availability slot does not belong to the parking space"));
+        if (Boolean.TRUE.equals(slot.getIsBooked())) {
+            throw new IllegalStateException("Availability slot is already booked");
+        }
+        if (!request.getStartTime().equals(slot.getStartTime()) || !request.getEndTime().equals(slot.getEndTime())) {
+            throw new IllegalArgumentException("Booking time must match the selected availability slot");
+        }
+
+        parkingServiceClient.markBooked(request.getSlotId(), internalServiceSecret);
 
         long minutes = Duration.between(request.getStartTime(), request.getEndTime()).toMinutes();
         BigDecimal hours = BigDecimal.valueOf(Math.max(1, Math.ceil(minutes / 60.0)));
-        BigDecimal totalAmount = pricePerHour.multiply(hours).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal totalAmount = space.getPricePerHour().multiply(hours).setScale(2, RoundingMode.HALF_UP);
 
-        Booking booking = Booking.builder()
-                .userId(userId)
-                .parkingSpaceId(request.getParkingSpaceId())
-                .vehicleId(request.getVehicleId())
-                .startTime(request.getStartTime())
-                .endTime(request.getEndTime())
-                .totalAmount(totalAmount)
-                .status(BookingStatus.PENDING_PAYMENT)
-                .build();
-
-        booking = bookingRepository.save(booking);
+        Booking booking;
+        try {
+            booking = bookingRepository.save(Booking.builder()
+                    .userId(userId)
+                    .parkingSpaceId(request.getParkingSpaceId())
+                    .slotId(request.getSlotId())
+                    .vehicleId(request.getVehicleId())
+                    .startTime(request.getStartTime())
+                    .endTime(request.getEndTime())
+                    .totalAmount(totalAmount)
+                    .status(BookingStatus.PENDING_PAYMENT)
+                    .build());
+        } catch (RuntimeException exception) {
+            parkingServiceClient.markUnbooked(request.getSlotId(), internalServiceSecret);
+            throw exception;
+        }
 
         historyRepository.save(BookingStatusHistory.builder()
                 .bookingId(booking.getId())
@@ -87,6 +116,16 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found with ID: " + bookingId));
         return mapToResponse(booking);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BookingResponse getBookingByIdForUser(Long userId, Long bookingId) {
+        BookingResponse response = getBookingById(bookingId);
+        if (!userId.equals(response.getUserId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Booking belongs to another renter");
+        }
+        return response;
     }
 
     @Override
@@ -140,6 +179,7 @@ public class BookingServiceImpl implements BookingService {
 
         booking.setStatus(BookingStatus.CANCELLED);
         booking = bookingRepository.save(booking);
+        parkingServiceClient.markUnbooked(booking.getSlotId(), internalServiceSecret);
 
         historyRepository.save(BookingStatusHistory.builder()
                 .bookingId(booking.getId())
@@ -156,6 +196,7 @@ public class BookingServiceImpl implements BookingService {
                 .id(booking.getId())
                 .userId(booking.getUserId())
                 .parkingSpaceId(booking.getParkingSpaceId())
+                .slotId(booking.getSlotId())
                 .vehicleId(booking.getVehicleId())
                 .startTime(booking.getStartTime())
                 .endTime(booking.getEndTime())

@@ -9,6 +9,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Date;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -31,11 +32,14 @@ public class JwtService {
     @Value("${jwt.public-key:#{null}}")
     private String publicKeyStr;
 
-    @Value("${jwt.access-expiration-ms:86400000}") // 24 hours default
+    @Value("${jwt.access-expiration-ms:900000}")
     private long accessExpirationMs;
 
     @Value("${jwt.refresh-expiration-ms:604800000}") // 7 days default
     private long refreshExpirationMs;
+
+    @Value("${jwt.generate-dev-keys:false}")
+    private boolean generateDevKeys;
 
     @Getter
     private PrivateKey privateKey;
@@ -54,25 +58,18 @@ public class JwtService {
                 this.privateKey = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(privBytes));
                 this.publicKey = keyFactory.generatePublic(new X509EncodedKeySpec(pubBytes));
                 log.info("Successfully loaded RS256 key pair from configuration.");
-            } else {
-                log.info("No RS256 key pair configured. Generating dynamic RSA key pair...");
+            } else if (generateDevKeys) {
+                log.warn("Generating ephemeral RS256 keys because jwt.generate-dev-keys is enabled. Tokens will be invalid after restart.");
                 KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
                 keyPairGenerator.initialize(2048);
                 KeyPair keyPair = keyPairGenerator.generateKeyPair();
                 this.privateKey = keyPair.getPrivate();
                 this.publicKey = keyPair.getPublic();
+            } else {
+                throw new IllegalStateException("JWT_PRIVATE_KEY and JWT_PUBLIC_KEY must be configured");
             }
         } catch (Exception e) {
-            log.error("Failed to initialize RS256 keys, generating fallback RSA key pair.", e);
-            try {
-                KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-                keyPairGenerator.initialize(2048);
-                KeyPair keyPair = keyPairGenerator.generateKeyPair();
-                this.privateKey = keyPair.getPrivate();
-                this.publicKey = keyPair.getPublic();
-            } catch (Exception ex) {
-                throw new RuntimeException("Could not initialize RSA KeyPair", ex);
-            }
+            throw new IllegalStateException("Could not initialize configured RSA key pair", e);
         }
     }
 
@@ -82,6 +79,7 @@ public class JwtService {
 
         return Jwts.builder()
                 .subject(user.getId().toString())
+                .id(UUID.randomUUID().toString())
                 .claim("email", user.getEmail())
                 .claim("role", user.getRole().name())
                 .claim("fullName", user.getFullName())
@@ -97,6 +95,7 @@ public class JwtService {
 
         return Jwts.builder()
                 .subject(user.getId().toString())
+                .id(UUID.randomUUID().toString())
                 .claim("type", "refresh")
                 .issuedAt(now)
                 .expiration(expiryDate)

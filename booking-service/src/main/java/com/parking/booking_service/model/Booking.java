@@ -36,6 +36,9 @@ public class Booking {
     @Column(name = "parking_space_id", nullable = false)
     private Long parkingSpaceId;
 
+    @Column(name = "slot_id", nullable = false)
+    private Long slotId;
+
     @Column(name = "vehicle_id")
     private Long vehicleId;
 

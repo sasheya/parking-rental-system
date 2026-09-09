@@ -37,4 +37,4 @@ eureka:
     prefer-ip-address: true
 
 jwt:
-  public-key: ""
+  public-key: ${JWT_PUBLIC_KEY:}

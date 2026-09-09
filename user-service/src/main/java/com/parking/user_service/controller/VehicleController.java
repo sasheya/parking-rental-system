@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.parking.user_service.dto.VehicleDTO;
 import com.parking.user_service.service.VehicleService;
+import com.parking.common_security.ApiResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,35 +29,35 @@ public class VehicleController {
     private final VehicleService vehicleService;
 
     @GetMapping
-    public ResponseEntity<List<VehicleDTO>> getMyVehicles(Authentication authentication) {
+    public ResponseEntity<ApiResponse<List<VehicleDTO>>> getMyVehicles(Authentication authentication) {
         Long userId = getUserIdFromAuth(authentication);
         List<VehicleDTO> vehicles = vehicleService.getVehiclesByUserId(userId);
-        return ResponseEntity.ok(vehicles);
+        return ResponseEntity.ok(ApiResponse.success(vehicles));
     }
 
     @PostMapping
-    public ResponseEntity<VehicleDTO> addVehicle(Authentication authentication,
+    public ResponseEntity<ApiResponse<VehicleDTO>> addVehicle(Authentication authentication,
                                                  @Valid @RequestBody VehicleDTO dto) {
         Long userId = getUserIdFromAuth(authentication);
         VehicleDTO created = vehicleService.addVehicle(userId, dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(created));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<VehicleDTO> updateVehicle(Authentication authentication,
+    public ResponseEntity<ApiResponse<VehicleDTO>> updateVehicle(Authentication authentication,
                                                     @PathVariable("id") Long id,
                                                     @Valid @RequestBody VehicleDTO dto) {
         Long userId = getUserIdFromAuth(authentication);
         VehicleDTO updated = vehicleService.updateVehicle(userId, id, dto);
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(ApiResponse.success(updated));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteVehicle(Authentication authentication,
+    public ResponseEntity<ApiResponse<Void>> deleteVehicle(Authentication authentication,
                                                @PathVariable("id") Long id) {
         Long userId = getUserIdFromAuth(authentication);
         vehicleService.deleteVehicle(userId, id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     private Long getUserIdFromAuth(Authentication authentication) {

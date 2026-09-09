@@ -25,7 +25,7 @@ public class RevokedToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 1000)
+    @Column(nullable = false, unique = true, length = 768)
     private String token;
 
     @Column(name = "revoked_at", nullable = false)

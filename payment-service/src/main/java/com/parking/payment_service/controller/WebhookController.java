@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.parking.payment_service.service.PaymentService;
+import com.parking.common_security.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -19,9 +20,9 @@ public class WebhookController {
     private final PaymentService paymentService;
 
     @PostMapping("/webhook")
-    public ResponseEntity<String> handleStripeWebhook(@RequestBody String payload,
+    public ResponseEntity<ApiResponse<java.util.Map<String, Boolean>>> handleStripeWebhook(@RequestBody String payload,
                                                       @RequestHeader(value = "Stripe-Signature", required = false) String sigHeader) {
         paymentService.handleStripeEvent(payload, sigHeader);
-        return ResponseEntity.ok("Received");
+        return ResponseEntity.ok(ApiResponse.success(java.util.Map.of("received", true)));
     }
 }
