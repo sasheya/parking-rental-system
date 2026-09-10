@@ -29,7 +29,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         return "OPTIONS".equalsIgnoreCase(request.getMethod())
                 || path.startsWith("/api/auth/")
-                || path.equals("/api/auth")
+                || path.equals("/api/auth")            
+                // Swagger/OpenAPI
+                || path.contains("/v3/api-docs")
+                || path.startsWith("/swagger-ui")
+                || path.equals("/swagger-ui.html")
                 || path.startsWith("/actuator/")
                 || path.equals("/actuator")
                 || ("GET".equalsIgnoreCase(request.getMethod()) && path.startsWith("/api/parking"));
