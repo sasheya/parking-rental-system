@@ -1,6 +1,8 @@
 # Maven
 target/
 *.class
+*.factorypath
+**/HELP.md
 
 # IDE
 .settings/
@@ -17,7 +19,11 @@ build/
 
 # Env & secrets
 .env
+.env.*
+!.env.example
 *.pem
+private_key_base64.txt
+public_key_base64.txt
 infra/keys/
 
 # OS
