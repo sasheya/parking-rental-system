@@ -70,9 +70,11 @@ public class AvailabilityController {
     }
 
     @PutMapping("/slots/{slotId}/status")
+    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<Void>> updateSlotStatus(@PathVariable("slotId") Long slotId,
-                                                 @RequestParam("isBooked") boolean isBooked) {
-        availabilityService.updateSlotStatus(slotId, isBooked);
+                                                 @RequestParam("isBooked") boolean isBooked,
+                                                 Authentication authentication) {
+        availabilityService.updateSlotStatus(getUserId(authentication), slotId, isBooked);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
@@ -80,7 +82,7 @@ public class AvailabilityController {
     public ResponseEntity<Void> markBooked(@PathVariable("slotId") Long slotId,
                                            @RequestHeader("X-Internal-Secret") String secret) {
         assertInternalSecret(secret);
-        availabilityService.updateSlotStatus(slotId, true);
+        availabilityService.updateSlotStatusInternal(slotId, true);
         return ResponseEntity.noContent().build();
     }
 
@@ -88,7 +90,7 @@ public class AvailabilityController {
     public ResponseEntity<Void> markUnbooked(@PathVariable("slotId") Long slotId,
                                              @RequestHeader("X-Internal-Secret") String secret) {
         assertInternalSecret(secret);
-        availabilityService.updateSlotStatus(slotId, false);
+        availabilityService.updateSlotStatusInternal(slotId, false);
         return ResponseEntity.noContent().build();
     }
 

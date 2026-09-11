@@ -78,6 +78,11 @@ public class AuthController {
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<com.parking.auth_service.dto.CurrentUserResponse>> me(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            return ResponseEntity.status(401)
+                .body(ApiResponse.failure("UNAUTHORIZED", "Missing or invalid access token"));
+        }
         Long userId = Long.valueOf(authentication.getName());
         return ResponseEntity.ok(ApiResponse.success(authService.getCurrentUser(userId)));
     }

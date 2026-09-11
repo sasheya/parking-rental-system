@@ -36,7 +36,9 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<ApiResponse<UserProfileDTO>> getProfileByUserId(@PathVariable("userId") Long userId) {
+    public ResponseEntity<ApiResponse<UserProfileDTO>> getProfileByUserId(@PathVariable("userId") Long userId,
+                                                                           Authentication authentication) {
+        assertSameUser(userId, authentication);
         UserProfileDTO profile = userService.getProfileByUserId(userId);
         return ResponseEntity.ok(ApiResponse.success(profile));
     }

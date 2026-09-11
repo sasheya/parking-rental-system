@@ -92,9 +92,7 @@ public class PaymentServiceImpl implements PaymentService {
                 paymentIntentId = intent.getId();
                 clientSecret = intent.getClientSecret();
             } catch (Exception e) {
-                log.warn("Stripe API call failed, generating simulated payment intent", e);
-                paymentIntentId = "pi_mock_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-                clientSecret = paymentIntentId + "_secret_mock";
+                throw new IllegalStateException("Could not create payment intent with Stripe", e);
             }
         } else {
             paymentIntentId = "pi_mock_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
@@ -161,7 +159,7 @@ public class PaymentServiceImpl implements PaymentService {
             );
             log.info("Successfully notified Booking Service to confirm booking ID: {}", transaction.getBookingId());
         } catch (Exception e) {
-            log.warn("Failed to notify Booking Service via Feign during payment confirmation", e);
+            throw new IllegalStateException("Payment succeeded but booking confirmation failed", e);
         }
 
         return mapToResponse(transaction);

@@ -67,6 +67,7 @@ public class ParkingSpaceController {
     }
 
     @GetMapping("/owner/my-listings")
+    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<List<ParkingSpaceDTO>>> getMyListings(Authentication authentication) {
         Long ownerId = getUserIdFromAuth(authentication);
         List<ParkingSpaceDTO> listings = parkingSpaceService.getListingsByOwnerId(ownerId);
@@ -74,6 +75,7 @@ public class ParkingSpaceController {
     }
 
     @GetMapping("/owner/{ownerId}")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<ParkingSpaceDTO>>> getOwnerListings(@PathVariable Long ownerId) {
         return ResponseEntity.ok(ApiResponse.success(parkingSpaceService.getListingsByOwnerId(ownerId)));
     }

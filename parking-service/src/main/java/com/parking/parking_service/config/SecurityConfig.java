@@ -32,7 +32,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/", "/error", "/actuator/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/parking/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/parking", "/api/parking/search",
+                    "/api/parking/{id}", "/api/parking/{spaceId}/slots",
+                    "/api/parking/{spaceId}/availability").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/api/parking/internal/**").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**","/swagger-ui.html").permitAll()

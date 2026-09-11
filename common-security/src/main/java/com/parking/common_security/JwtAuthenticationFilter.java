@@ -37,7 +37,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // actuator               
                 || path.startsWith("/actuator/")
                 || path.equals("/actuator")
-                || ("GET".equalsIgnoreCase(request.getMethod()) && path.startsWith("/api/parking"));
+                || isPublicParkingRead(request);
+    }
+
+    private boolean isPublicParkingRead(HttpServletRequest request) {
+        if (!"GET".equalsIgnoreCase(request.getMethod())) {
+            return false;
+        }
+        String path = request.getRequestURI();
+        return path.equals("/api/parking")
+                || path.equals("/api/parking/search")
+                || path.matches("/api/parking/\\d+")
+                || path.matches("/api/parking/\\d+/(slots|availability)");
     }
 
     @Override

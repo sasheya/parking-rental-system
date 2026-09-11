@@ -57,7 +57,20 @@ public class AvailabilityServiceImpl implements AvailabilityService {
 
     @Override
     @Transactional
-    public void updateSlotStatus(Long slotId, boolean isBooked) {
+    public void updateSlotStatus(Long ownerId, Long slotId, boolean isBooked) {
+        AvailabilitySlot slot = slotRepository.findById(slotId)
+                .orElseThrow(() -> new IllegalArgumentException("Availability slot not found with ID: " + slotId));
+        ParkingSpace space = spaceRepository.findById(slot.getParkingSpaceId())
+                .orElseThrow(() -> new IllegalArgumentException("Parking space not found with ID: " + slot.getParkingSpaceId()));
+        if (!space.getOwnerId().equals(ownerId)) {
+            throw new org.springframework.security.access.AccessDeniedException("Parking slot does not belong to the authenticated owner");
+        }
+        updateSlotStatusInternal(slotId, isBooked);
+    }
+
+    @Override
+    @Transactional
+    public void updateSlotStatusInternal(Long slotId, boolean isBooked) {
         AvailabilitySlot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new IllegalArgumentException("Availability slot not found with ID: " + slotId));
 

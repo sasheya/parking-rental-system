@@ -7,5 +7,6 @@ import com.parking.parking_service.dto.AvailabilitySlotDTO;
 public interface AvailabilityService {
     List<AvailabilitySlotDTO> getSlotsBySpaceId(Long spaceId);
     AvailabilitySlotDTO createSlot(Long ownerId, Long spaceId, AvailabilitySlotDTO dto);
-    void updateSlotStatus(Long slotId, boolean isBooked);
+    void updateSlotStatus(Long ownerId, Long slotId, boolean isBooked);
+    void updateSlotStatusInternal(Long slotId, boolean isBooked);
 }

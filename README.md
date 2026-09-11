@@ -64,6 +64,35 @@ $env:Path = "C:\Program Files\nodejs;$env:Path"
 
 Set `VITE_API_URL` to override the gateway URL. The frontend includes Axios token attachment and refresh handling, authentication, parking search, listing details, owner listing creation, slot selection, checkout, Stripe Elements support, and booking history.
 
+## Quality checks
+
+Run the reactor from the repository root using the wrapper in `common-security`:
+
+```powershell
+common-security\mvnw.cmd -f pom.xml test
+common-security\mvnw.cmd -f pom.xml verify
+```
+
+`verify` runs the aggregate JaCoCo report at `target/site/jacoco-aggregate`. Sonar properties are read from `SONAR_HOST_URL` and `SONAR_TOKEN`; credentials are never stored in the repository. Run Sonar only when a server is available:
+
+```powershell
+common-security\mvnw.cmd -f pom.xml verify sonar:sonar
+```
+
+Application logs should be written under `logs/` when file logging is enabled by the runtime configuration. Generated logs and reports are ignored by Git. Endpoint evidence and current blockers are tracked in [docs/api-endpoint-verification.md](docs/api-endpoint-verification.md), with the quality summary in [docs/project-quality-report.md](docs/project-quality-report.md) and the local flow in [docs/e2e-demo.md](docs/e2e-demo.md).
+
+## Coding standards
+
+Keep controllers focused on HTTP mapping, services responsible for business rules, and repositories responsible for persistence. Use Bean Validation at request boundaries, domain-specific failures for business conflicts, SLF4J for application logging, and tests that assert observable behavior for both success and failure paths. Do not log credentials, tokens, payment data, or private key material.
+
+## Quality remediation agent prompt
+
+The detailed prompt for verifying every API endpoint, fixing backend and frontend integration issues, adding custom exception handling, implementing SLF4J/AOP file logging, expanding JUnit/Mockito tests, configuring JaCoCo/SonarQube, and producing verification reports is available at:
+
+- [docs/api-quality-remediation-agent-prompt.md](docs/api-quality-remediation-agent-prompt.md)
+
+The prompt requires fresh evidence for compilation, tests, coverage, frontend build, endpoint behavior, and the end-to-end booking/payment flow. It also documents the current React/Vite frontend so an Angular-specific requirement is not incorrectly claimed as fulfilled.
+
 ## Security notes
 
 - Access tokens expire after 15 minutes by default.

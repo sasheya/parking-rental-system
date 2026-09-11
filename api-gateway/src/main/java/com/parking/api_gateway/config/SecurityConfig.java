@@ -35,7 +35,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/", "/error", "/api/auth/**", "/actuator/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/parking/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/parking", "/api/parking/search",
+                    "/api/parking/{id}", "/api/parking/{spaceId}/slots",
+                    "/api/parking/{spaceId}/availability").permitAll()
                  .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/webjars/**").permitAll()
                 .anyRequest().authenticated()
             )

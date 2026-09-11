@@ -78,6 +78,7 @@ public class BookingController {
     }
 
     @GetMapping("/space/{spaceId}")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<BookingResponse>>> getBookingsBySpace(@PathVariable("spaceId") Long spaceId) {
         List<BookingResponse> bookings = bookingService.getBookingsByParkingSpace(spaceId);
         return ResponseEntity.ok(ApiResponse.success(bookings));

@@ -1,6 +1,5 @@
 package com.parking.booking_service.config;
 
-
 import java.util.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
