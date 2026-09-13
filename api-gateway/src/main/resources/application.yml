@@ -1,0 +1,59 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      mvc:
+        routes:
+          - id: auth-service
+            uri: lb://auth-service
+            # uri: /api/auth/v3/api-docs
+            predicates:
+              - Path=/api/auth/**
+          - id: user-service
+            uri: lb://user-service
+            predicates:
+              - Path=/api/users/**, /api/vehicles/**
+          - id: parking-service
+            uri: lb://parking-service
+            # uri: /api/parking/v3/api-docs
+            predicates:
+              - Path=/api/parking/**
+          - id: booking-service
+            # uri: /api/booking/v3/api-docs
+            uri: lb://booking-service
+            predicates:
+              - Path=/api/bookings/**
+          - id: payment-service
+            # uri: /api/payment/v3/api-docs
+            uri: lb://payment-service
+            predicates:
+              - Path=/api/payments/**
+
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: auth-service
+        url: /api/auth/v3/api-docs
+      - name: user-service
+        url: /api/users/v3/api-docs
+      - name: parking-service
+        url: /api/parking/v3/api-docs
+      - name: booking-service
+        url: /api/bookings/v3/api-docs
+      - name: payment-service
+        url: /api/payments/v3/api-docs
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+jwt:
+  public-key: ${JWT_PUBLIC_KEY:}

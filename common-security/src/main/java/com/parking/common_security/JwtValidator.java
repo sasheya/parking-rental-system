@@ -15,12 +15,21 @@ public class JwtValidator {
 	private final PublicKey publicKey;
 	
 	public JwtValidator(JwtProperties props) throws Exception {
-		byte[] keyBytes = Base64.getDecoder().decode(props.getPublicKey());
+		if (props.getPublicKey() == null || props.getPublicKey().isBlank()) {
+			this.publicKey = null;
+			return;
+		}
+
+		byte[] keyBytes = Base64.getDecoder().decode(props.getPublicKey().trim());
 		X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
 		this.publicKey = KeyFactory.getInstance("RSA").generatePublic(spec);
 	}
 	
 	public Claims validateAndParse(String token) {
+		if (publicKey == null) {
+			throw new IllegalStateException("JWT_PUBLIC_KEY is not configured");
+		}
+
 		return Jwts.parser()
 				.verifyWith(publicKey)
 				.build()
