@@ -39,7 +39,7 @@ public class BookingController {
     private String internalServiceSecret;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('DRIVER', 'OWNER')")
+    @PreAuthorize("hasAnyRole('ROLE_DRIVER', 'ROLE_OWNER')")
     public ResponseEntity<ApiResponse<BookingResponse>> createBooking(Authentication authentication,
                                                          @Valid @RequestBody CreateBookingRequest request) {
         Long userId = getUserIdFromAuth(authentication);
@@ -78,14 +78,14 @@ public class BookingController {
     }
 
     @GetMapping("/space/{spaceId}")
-    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_OWNER', 'ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<List<BookingResponse>>> getBookingsBySpace(@PathVariable("spaceId") Long spaceId) {
         List<BookingResponse> bookings = bookingService.getBookingsByParkingSpace(spaceId);
         return ResponseEntity.ok(ApiResponse.success(bookings));
     }
 
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLR_OWNER')")
     public ResponseEntity<ApiResponse<BookingResponse>> updateBookingStatus(@PathVariable("id") Long id,
                                                                @Valid @RequestBody BookingStatusUpdateRequest request) {
         BookingResponse updated = bookingService.updateBookingStatus(id, request);
@@ -93,7 +93,7 @@ public class BookingController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_OWNER')")
     public ResponseEntity<ApiResponse<BookingResponse>> patchStatus(@PathVariable Long id,
                                                        @RequestParam BookingStatus status,
                                                        @RequestParam(required = false) String remarks) {
@@ -111,7 +111,7 @@ public class BookingController {
     }
 
     @PostMapping("/{id}/cancel")
-    @PreAuthorize("hasAnyRole('DRIVER', 'OWNER')")
+    @PreAuthorize("hasAnyRole('ROLE_DRIVER', 'ROLE_OWNER')")
     public ResponseEntity<ApiResponse<BookingResponse>> cancelBooking(Authentication authentication,
                                                          @PathVariable("id") Long id) {
         Long userId = getUserIdFromAuth(authentication);
@@ -120,7 +120,7 @@ public class BookingController {
     }
 
     @PatchMapping("/{id}/cancel")
-    @PreAuthorize("hasAnyRole('DRIVER', 'OWNER')")
+    @PreAuthorize("hasAnyRole('ROLE_DRIVER', 'ROLE_OWNER')")
     public ResponseEntity<ApiResponse<BookingResponse>> patchCancel(Authentication authentication, @PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(bookingService.cancelBooking(getUserIdFromAuth(authentication), id)));
     }

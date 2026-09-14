@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -59,8 +60,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(header) && header.startsWith(SecurityConstants.TOKEN_PREFIX)) {
             String token = header.substring(SecurityConstants.TOKEN_PREFIX.length());
             try {
-                Long userId = jwtValidator.getUserId(token);
-                String role = jwtValidator.getRole(token);
+                Claims claims = jwtValidator.validateAndParse(token);
+                if ("refresh".equals(claims.get("type", String.class))) {
+                    throw new IllegalArgumentException("Refresh tokens cannot authenticate API requests");
+                }
+
+                Long userId = Long.parseLong(claims.getSubject());
+                String role = claims.get("role", String.class);
 
                 if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     String authority = (role != null && !role.startsWith("ROLE_")) ? "ROLE_" + role : role;

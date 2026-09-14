@@ -53,7 +53,7 @@ public class AvailabilityController {
     }
 
     @PostMapping("/{spaceId}/slots")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('ROLE_OWNER')")
     public ResponseEntity<ApiResponse<AvailabilitySlotDTO>> createSlot(@PathVariable("spaceId") Long spaceId,
                                                           Authentication authentication,
                                                           @Valid @RequestBody AvailabilitySlotDTO dto) {
@@ -62,7 +62,7 @@ public class AvailabilityController {
     }
 
     @PostMapping("/{spaceId}/availability")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('ROLE_OWNER')")
     public ResponseEntity<ApiResponse<AvailabilitySlotDTO>> addAvailability(@PathVariable Long spaceId,
                                                                Authentication authentication,
                                                                @Valid @RequestBody AvailabilitySlotDTO dto) {
@@ -70,7 +70,7 @@ public class AvailabilityController {
     }
 
     @PutMapping("/slots/{slotId}/status")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('ROLE_OWNER')")
     public ResponseEntity<ApiResponse<Void>> updateSlotStatus(@PathVariable("slotId") Long slotId,
                                                  @RequestParam("isBooked") boolean isBooked,
                                                  Authentication authentication) {

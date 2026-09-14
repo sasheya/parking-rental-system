@@ -65,7 +65,7 @@ public class PaymentController {
     }
 
     @PostMapping("/refund")
-    @PreAuthorize("hasAnyRole('DRIVER', 'OWNER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_DRIVER', 'ROLE_OWNER', 'ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<RefundResponse>> processRefund(Authentication authentication,
                                                         @Valid @RequestBody RefundRequest request) {
         Long userId = getUserIdFromAuth(authentication);
@@ -74,7 +74,7 @@ public class PaymentController {
     }
 
     @PostMapping("/{id}/refund")
-    @PreAuthorize("hasAnyRole('DRIVER', 'OWNER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_DRIVER', 'ROLE_OWNER', 'ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<RefundResponse>> refundByTransaction(Authentication authentication,
                                                                @PathVariable Long id,
                                                                @Valid @RequestBody RefundRequest request) {

@@ -67,7 +67,7 @@ public class ParkingSpaceController {
     }
 
     @GetMapping("/owner/my-listings")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('ROLE_OWNER')")
     public ResponseEntity<ApiResponse<List<ParkingSpaceDTO>>> getMyListings(Authentication authentication) {
         Long ownerId = getUserIdFromAuth(authentication);
         List<ParkingSpaceDTO> listings = parkingSpaceService.getListingsByOwnerId(ownerId);
@@ -75,13 +75,13 @@ public class ParkingSpaceController {
     }
 
     @GetMapping("/owner/{ownerId}")
-    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_OWNER', 'ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<List<ParkingSpaceDTO>>> getOwnerListings(@PathVariable Long ownerId) {
         return ResponseEntity.ok(ApiResponse.success(parkingSpaceService.getListingsByOwnerId(ownerId)));
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('ROLE_OWNER')")
     public ResponseEntity<ApiResponse<ParkingSpaceDTO>> createSpace(Authentication authentication,
                                                        @Valid @RequestBody ParkingSpaceDTO dto) {
         Long ownerId = getUserIdFromAuth(authentication);
@@ -90,7 +90,7 @@ public class ParkingSpaceController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('ROLE_OWNER')")
     public ResponseEntity<ApiResponse<ParkingSpaceDTO>> updateSpace(Authentication authentication,
                                                        @PathVariable("id") Long id,
                                                        @Valid @RequestBody ParkingSpaceDTO dto) {
@@ -100,7 +100,7 @@ public class ParkingSpaceController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('ROLE_OWNER')")
     public ResponseEntity<ApiResponse<Void>> deleteSpace(Authentication authentication,
                                              @PathVariable("id") Long id) {
         Long ownerId = getUserIdFromAuth(authentication);
