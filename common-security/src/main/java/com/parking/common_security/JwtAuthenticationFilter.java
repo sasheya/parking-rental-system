@@ -29,7 +29,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
         return "OPTIONS".equalsIgnoreCase(request.getMethod())
-                || path.startsWith("/api/auth/")
+                || (path.startsWith("/api/auth/") && !path.equals("/api/auth/me"))
                 || path.equals("/api/auth")            
                 // Swagger/OpenAPI
                 || path.contains("/v3/api-docs")

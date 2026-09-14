@@ -11,21 +11,21 @@ Copy-Item .env.example .env
 docker compose up --build
 ```
 
-Wait for MySQL, Eureka, the gateway, and the application services to report healthy/started. Open `http://localhost:5173`.
+Wait for MySQL, Eureka, the gateway, and the application services to report healthy/started. The backend gateway is available at `http://localhost:8080`.
 
 ## Flow
 
 1. Register a new test account with a unique email, or log in with an account created for this run.
-2. Search parking from the client and confirm the request goes to the gateway at `http://localhost:8080`.
-3. Open a listing and retrieve its availability slots.
+2. Search parking through the gateway at `http://localhost:8080`.
+3. Retrieve a listing and its availability slots.
 4. Select an available slot and create a booking.
 5. Initiate payment with the booking identifier. With no Stripe secret, the backend's configured simulation path is expected.
 6. Confirm the simulated payment and verify the booking status transition.
-7. Open booking history and confirm the new booking is listed.
+7. Retrieve booking history and confirm the new booking is listed.
 
 ## API smoke equivalents
 
-Use the browser network panel or an HTTP client with the access token from login. The expected public paths and response envelopes are documented in `api-endpoint-verification.md`. Do not manually fabricate success responses; a failed prerequisite must remain visible.
+Use an HTTP client with the access token from login. The expected public paths and response envelopes are documented in `api-endpoint-verification.md`. Do not manually fabricate success responses; a failed prerequisite must remain visible.
 
 ## Cleanup
 

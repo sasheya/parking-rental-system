@@ -11,7 +11,6 @@ Date: 2026-09-11
 | Clean verify gate | BLOCKED | Windows/OneDrive lock on `common-security\target\test-classes` |
 | JaCoCo | CONFIGURED and EXECUTED | Aggregate report goal completed under `target/site/jacoco-aggregate`; no 80% claim because suite is incomplete |
 | Sonar | UNVERIFIED | Environment-driven properties added; no `SONAR_HOST_URL`/`SONAR_TOKEN` execution was available |
-| Frontend build | BLOCKED | `npm ci` failed with EPERM on esbuild executable; `vite` was unavailable afterward |
 | Gateway HTTP/E2E | BLOCKED | Services did not remain running and MySQL/Eureka were unavailable |
 | Endpoint inventory | COMPLETE | Controller, Feign, gateway, and security-derived matrix in `api-endpoint-verification.md` |
 | Exception handling | PARTIAL | Per-service `@RestControllerAdvice` exists; shared timestamp/status/path envelope and broader mappings remain |
@@ -32,5 +31,4 @@ No credentials, tokens, private keys, or environment files were printed or added
 
 - Six automated tests are insufficient for the requested service-level coverage.
 - No fresh authenticated HTTP booking/payment flow was possible without running infrastructure.
-- Frontend dependency installation is blocked by a locked executable in a OneDrive-managed directory.
 - Service startup failures need separate diagnosis after the local MySQL/Eureka prerequisites are available.

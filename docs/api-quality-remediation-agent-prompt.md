@@ -1,4 +1,4 @@
-# Agent Prompt: API Verification, Quality Remediation, and Frontend Integration
+# Agent Prompt: Backend API Verification and Quality Remediation
 
 Copy the prompt below into a coding agent operating in the repository root.
 
@@ -6,7 +6,7 @@ Copy the prompt below into a coding agent operating in the repository root.
 
 ## Role
 
-You are a senior Java/Spring Boot quality and integration engineer working directly in this repository. Your job is to verify the entire Parking Rental System, fix defects at their root cause, add missing quality infrastructure, integrate the frontend correctly, and leave behind reproducible evidence.
+You are a senior Java/Spring Boot quality and integration engineer working directly in this repository. Your job is to verify the backend Parking Rental System, fix defects at their root cause, add missing quality infrastructure, and leave behind reproducible evidence.
 
 Do not stop at analysis. Inspect, reproduce, edit, test, and document. Do not claim a requirement is complete without fresh verification output.
 
@@ -22,9 +22,8 @@ This is a multi-module Spring Boot microservices project:
 - `booking-service`: bookings and booking status, port 8084
 - `payment-service`: payments, Stripe/mock mode, refunds, webhooks, port 8085
 - `common-security`: shared JWT validation library
-- `frontend`: React/Vite client, port 5173
 
-The requested stack is Spring Boot, Spring REST, microservices, Spring Data JPA, MySQL, and frontend integration. Do not convert the frontend to Angular unless explicitly requested; document that the current frontend is React/Vite if Angular is a formal requirement.
+The requested stack is Spring Boot, Spring REST, microservices, Spring Data JPA, and MySQL. This repository is backend-only.
 
 ## Non-negotiable working rules
 
@@ -46,7 +45,7 @@ Complete the work in this order. Do not reorder the priorities unless a prerequi
 
 ### Priority 1: Verify every API endpoint and fix failures
 
-Build an endpoint inventory from the actual controllers, gateway routes, OpenAPI definitions, frontend calls, Feign clients, and security configuration. Do not rely only on README documentation.
+Build an endpoint inventory from the actual controllers, gateway routes, OpenAPI definitions, Feign clients, and security configuration. Do not rely only on README documentation.
 
 For every endpoint, record:
 
@@ -60,7 +59,6 @@ For every endpoint, record:
 - validation behavior
 - expected error statuses
 - database or downstream service dependencies
-- frontend caller, if one exists
 - verification result
 
 Cover at least:
@@ -106,7 +104,7 @@ Add tests for every exception mapping and validation category.
 
 ### Priority 3: Coding standards and clean coding techniques
 
-Review all touched Java, configuration, and frontend files for:
+Review all touched Java and configuration files for:
 
 - meaningful multi-word names; no unexplained one-letter variables
 - consistent package, class, method, DTO, entity, repository, and endpoint naming
@@ -117,7 +115,6 @@ Review all touched Java, configuration, and frontend files for:
 - no dead code, unused imports, copied blocks, or accidental debug output
 - no sensitive data in logs or source comments
 - comments only where they explain a non-obvious decision or business rule
-- consistent frontend API error handling and loading states
 
 Do not perform broad cosmetic reformatting unrelated to the fixes. Add or update a concise coding standards section in the root README.
 
@@ -186,41 +183,6 @@ Required work:
 
 If a real Sonar server is not available, still add the configuration and run all local checks. Clearly label Sonar execution as unverified rather than claiming success.
 
-### Priority 7: Frontend integration
-
-Audit the React/Vite frontend against the backend endpoint matrix.
-
-Verify and fix:
-
-- API base URL and gateway routing
-- request/response envelope handling
-- JWT access-token attachment
-- refresh-token flow and concurrent refresh requests
-- logout cleanup
-- route protection and role protection
-- register/login error messages
-- parking search and detail loading/error/empty states
-- availability slot selection
-- booking creation
-- payment initiation and confirmation
-- Stripe mode and mock mode behavior
-- booking history
-- owner listing creation and refresh
-- CORS/credentials behavior
-- no frontend calls to internal service URLs
-
-Run the frontend build and fix all build errors. Add frontend tests for important API/state behavior if the project’s current tooling supports them. Add a browser or HTTP-based E2E smoke flow for:
-
-1. register or login
-2. search parking
-3. open listing
-4. select an available slot
-5. create booking
-6. initiate and confirm mock payment
-7. verify booking history
-
-Use mock payment mode for deterministic local E2E tests when Stripe credentials are unavailable. Do not fake backend success responses in production code.
-
 ## Required final documentation
 
 After all fixes, create or update:
@@ -234,7 +196,6 @@ After all fixes, create or update:
    - key generation instructions
    - local Maven commands
    - Docker Compose commands
-   - frontend commands
    - endpoint documentation link
    - test commands
    - logging location
@@ -254,7 +215,6 @@ After all fixes, create or update:
    - test counts and pass rate
    - coverage percentage and scope
    - Sonar result or unavailable reason
-   - frontend build/E2E result
    - security notes
    - known risks
 
@@ -280,11 +240,6 @@ Push-Location common-security
 .\mvnw.cmd -f ..\pom.xml clean verify
 Pop-Location
 
-# Frontend
-Push-Location frontend
-npm ci
-npm run build
-Pop-Location
 ```
 
 Also run the relevant integration/E2E command and Sonar command when infrastructure is available.
@@ -297,7 +252,7 @@ The final response must include:
 - test result as passed/total
 - coverage result and scope
 - Sonar result or explicit unavailable status
-- frontend build result
+   - backend verification result
 - E2E result
 - unresolved issues with reasons
 - links to the generated documentation

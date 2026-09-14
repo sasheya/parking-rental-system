@@ -22,7 +22,6 @@ Think of the system like a small city with separate departments:
 - payment department: creates payment intents and confirms/refunds
 - gateway: one front door for all requests
 - discovery server: helps services find each other
-- frontend: browser app users interact with
 
 The app uses:
 
@@ -33,21 +32,19 @@ The app uses:
 - Spring Security + JWT
 - MySQL per service
 - Feign for inter-service calls
-- React + Vite frontend
 - Stripe integration for real/virtual payment flows
 
 ---
 
 ## 2. How the request moves through the system
 
-### Request path from browser
+### Request path through the API gateway
 
-1. The browser calls the frontend at port 5173.
-2. The frontend sends requests to the API gateway at port 8080.
-3. The gateway routes the request to the correct microservice using a path rule.
-4. The destination service validates the JWT and applies its own business logic.
-5. If a service needs data from another service, it does a service-to-service call (Feign client).
-6. The service writes or reads MySQL data and returns a business response.
+1. An API client sends requests to the API gateway at port 8080.
+2. The gateway routes the request to the correct microservice using a path rule.
+3. The destination service validates the JWT and applies its own business logic.
+4. If a service needs data from another service, it does a service-to-service call (Feign client).
+5. The service writes or reads MySQL data and returns a business response.
 
 ### Data and identity flow
 
@@ -167,13 +164,13 @@ What it does:
 
 Authentication flow:
 
-1. Browser posts email + password to `/api/auth/login`.
+1. An API client posts email + password to `/api/auth/login`.
 2. Auth service loads the user from MySQL.
 3. It checks password hash using Spring Security encoder.
 4. It generates a JWT access token and a refresh token.
 5. It returns both to the client, plus a secure HttpOnly refresh cookie.
-6. The client stores the access token in localStorage and sends it in Authorization header.
-7. On 401, the frontend calls `/api/auth/refresh`.
+6. The client sends the access token in the Authorization header.
+7. On 401, the client calls `/api/auth/refresh`.
 
 Security details:
 
@@ -329,36 +326,6 @@ Status:
 
 ---
 
-### 3.9 Frontend
-
-Files:
-
-- [frontend/src/main.jsx](../frontend/src/main.jsx)
-- [frontend/src/api.js](../frontend/src/api.js)
-- [frontend/src/Checkout.jsx](../frontend/src/Checkout.jsx)
-
-What it does:
-
-- lets users register, log in, and log out
-- shows parking listings and search results
-- displays listing detail pages and slot availability
-- enables owner listing creation
-- lets drivers book parking via checkout flow
-- supports token refresh automatically on 401
-- handles a simulated Stripe checkout mode without a publishable key
-
-Authentication handling:
-
-- login stores access token in localStorage
-- the API client attaches the token on every request
-- if the token expires, the client automatically calls `/api/auth/refresh`
-- refresh token is sent as an HttpOnly cookie in browser mode
-
-Status:
-
-- the user-facing flow is implemented.
-- The frontend is a working prototype and appears to cover the core user journey.
-
 ---
 
 ## 4. Data model overview
@@ -448,13 +415,13 @@ Here is the most important operational flow in plain English:
 1. Driver logs in.
 2. Driver searches for parking spaces.
 3. Driver picks a listing and a slot.
-4. Frontend sends a booking create request to booking-service.
+4. The client sends a booking create request to booking-service.
 5. Booking service checks space status, slot availability, and time validity.
 6. Booking service saves a booking in `PENDING_PAYMENT` state.
-7. Frontend sends a payment request to payment-service.
+7. The client sends a payment request to payment-service.
 8. Payment service validates the booking belongs to the user and the amount matches.
 9. Payment service creates a Stripe PaymentIntent or a mock payment object.
-10. Frontend confirms payment.
+10. The client confirms payment.
 11. Payment service marks the transaction successful.
 12. Payment service tells Booking Service to set the booking status to `CONFIRMED`.
 13. Booking service stores status history and the reservation becomes active.
@@ -479,7 +446,6 @@ If Stripe is not configured, the payment system still simulates a payment so the
 | Stripe payment integration | Yes | Done (with fallback) | real Stripe when key is present, mock mode otherwise |
 | Webhook support | Yes | Partial/Done | endpoint exists and logic is implemented |
 | Refund flow | Yes | Done | logic exists in payment-service |
-| Frontend app | Yes | Done | React app covers login, booking, listing, checkout |
 | Docker Compose startup | Yes | Done | build and service wiring are configured |
 | Production security hardening | No | Partial | README explicitly notes remaining hardening work |
 | Distribution/revocation storage | No | Partial | not a full production-grade token revocation model |
@@ -513,7 +479,7 @@ So: the main functionality is there, but the system is not yet fully “battle-t
 
 If you want the simplest explanation:
 
-- frontend is your app
+- API client is the consumer application
 - gateway is the front door
 - auth-service is the identity system
 - user-service holds people and cars

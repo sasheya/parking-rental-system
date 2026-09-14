@@ -1,6 +1,6 @@
 # Parking Rental System
 
-Spring Boot microservices for renting parking spaces, with Eureka service discovery, an API gateway, RS256 JWT authentication, MySQL persistence, Stripe-compatible payments, and a React/Vite frontend.
+Spring Boot backend microservices for renting parking spaces, with Eureka service discovery, an API gateway, RS256 JWT authentication, MySQL persistence, and Stripe-compatible payments.
 
 ## Modules
 
@@ -12,7 +12,6 @@ Spring Boot microservices for renting parking spaces, with Eureka service discov
 - `booking-service`: bookings on `8084`
 - `payment-service`: payments and webhooks on `8085`
 - `common-security`: shared JWT library
-- `frontend`: React application on `5173`
 
 ## Local backend build
 
@@ -39,7 +38,7 @@ Copy `.env.example` to `.env` and set values before starting services. Generate 
 
 MySQL must be installed and running, but you do not need to create the service databases manually. Each datasource URL includes `createDatabaseIfNotExist=true`, so the configured MySQL user creates its database on first startup. The user must have permission to create databases. Flyway then creates the service tables.
 
-Set the same `INTERNAL_SERVICE_SECRET` value in booking and payment services for payment-to-booking calls. Set `VITE_STRIPE_PUBLISHABLE_KEY` in the frontend only when using real Stripe card entry; without it, the checkout uses the configured backend simulation mode.
+Set the same `INTERNAL_SERVICE_SECRET` value in booking and payment services for payment-to-booking calls. Leave `STRIPE_SECRET_KEY` empty to use the backend payment simulation mode.
 
 ## Docker Compose
 
@@ -49,20 +48,7 @@ Copy-Item .env.example .env
  docker compose up --build
 ```
 
-The browser client is available at `http://localhost:5173`; API traffic goes through `http://localhost:8080`.
-
-## Frontend development
-
-With Node.js 20 or newer installed:
-
-```powershell
-cd frontend
-$env:Path = "C:\Program Files\nodejs;$env:Path"
-& "C:\Program Files\nodejs\npm.cmd" install
-& "C:\Program Files\nodejs\npm.cmd" run dev
-```
-
-Set `VITE_API_URL` to override the gateway URL. The frontend includes Axios token attachment and refresh handling, authentication, parking search, listing details, owner listing creation, slot selection, checkout, Stripe Elements support, and booking history.
+The backend API is available through the gateway at `http://localhost:8080`.
 
 ## Quality checks
 
@@ -87,11 +73,11 @@ Keep controllers focused on HTTP mapping, services responsible for business rule
 
 ## Quality remediation agent prompt
 
-The detailed prompt for verifying every API endpoint, fixing backend and frontend integration issues, adding custom exception handling, implementing SLF4J/AOP file logging, expanding JUnit/Mockito tests, configuring JaCoCo/SonarQube, and producing verification reports is available at:
+The detailed prompt for verifying every API endpoint, fixing backend integration issues, adding custom exception handling, implementing SLF4J/AOP file logging, expanding JUnit/Mockito tests, configuring JaCoCo/SonarQube, and producing verification reports is available at:
 
 - [docs/api-quality-remediation-agent-prompt.md](docs/api-quality-remediation-agent-prompt.md)
 
-The prompt requires fresh evidence for compilation, tests, coverage, frontend build, endpoint behavior, and the end-to-end booking/payment flow. It also documents the current React/Vite frontend so an Angular-specific requirement is not incorrectly claimed as fulfilled.
+The prompt requires fresh evidence for compilation, tests, coverage, endpoint behavior, and the end-to-end booking/payment flow.
 
 ## Security notes
 

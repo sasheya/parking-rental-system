@@ -38,7 +38,7 @@ public class BookingController {
     @Value("${internal.service-secret:}")
     private String internalServiceSecret;
 
-    @PostMapping
+    @PostMapping("/my-bookings")
     @PreAuthorize("hasAnyRole('ROLE_DRIVER', 'ROLE_OWNER')")
     public ResponseEntity<ApiResponse<BookingResponse>> createBooking(Authentication authentication,
                                                          @Valid @RequestBody CreateBookingRequest request) {
@@ -85,7 +85,7 @@ public class BookingController {
     }
 
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLR_OWNER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_OWNER')")
     public ResponseEntity<ApiResponse<BookingResponse>> updateBookingStatus(@PathVariable("id") Long id,
                                                                @Valid @RequestBody BookingStatusUpdateRequest request) {
         BookingResponse updated = bookingService.updateBookingStatus(id, request);

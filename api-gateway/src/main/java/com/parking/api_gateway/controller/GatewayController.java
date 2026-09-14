@@ -15,7 +15,6 @@ public class GatewayController {
         return ApiResponse.success(Map.of(
                 "service", "api-gateway",
                 "status", "UP",
-                "frontend", "http://localhost:5173",
                 "health", "/actuator/health"
         ));
     }

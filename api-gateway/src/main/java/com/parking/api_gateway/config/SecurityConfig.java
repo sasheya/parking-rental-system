@@ -11,7 +11,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.config.Customizer;
 
 import com.parking.common_security.JwtAuthenticationFilter;
 
@@ -30,15 +29,15 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
-            .cors(Customizer.withDefaults())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/", "/error", "/api/auth/**", "/actuator/**").permitAll()
+                .requestMatchers("/", "/error", "/api/auth/register", "/api/auth/login",
+                    "/api/auth/refresh", "/api/auth/logout", "/api/auth/validate", "/actuator/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/parking", "/api/parking/search",
                     "/api/parking/{id}", "/api/parking/{spaceId}/slots",
                     "/api/parking/{spaceId}/availability").permitAll()
-                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/webjars/**").permitAll()
+                .requestMatchers("/v3/api-docs/**", "/api/*/v3/api-docs/**", "/swagger-ui/**", "/webjars/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

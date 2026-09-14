@@ -2,14 +2,13 @@
 
 ## Scope and evidence
 
-Inventory source: controller and Feign annotations under `*/src/main/java`, gateway routes, and frontend API client. Public paths below are routed through `http://localhost:8080`; direct service ports are included for diagnostics. `PENDING` means the endpoint is inventoried but requires a running MySQL/Eureka stack and an authenticated test flow. `PASS` is reserved for fresh executable evidence.
+Inventory source: controller and Feign annotations under `*/src/main/java`, gateway routes, and security configuration. Public paths below are routed through `http://localhost:8080`; direct service ports are included for diagnostics. `PENDING` means the endpoint is inventoried but requires a running MySQL/Eureka stack and an authenticated test flow. `PASS` is reserved for fresh executable evidence.
 
 Backend evidence collected on 2026-09-11:
 
 - `common-security\mvnw.cmd -f pom.xml test`: PASS, 6 tests, 0 failures.
 - `common-security\mvnw.cmd -f pom.xml verify`: PASS, reactor and JaCoCo aggregate goal completed.
 - `common-security\mvnw.cmd -f pom.xml clean verify`: BLOCKED before compilation because OneDrive/Java tooling held `common-security\target\test-classes` open.
-- `frontend\npm ci`: BLOCKED by Windows `EPERM` on `frontend\node_modules\@esbuild\win32-x64\esbuild.exe`; the subsequent build could not find `vite`.
 - Real HTTP gateway/E2E verification: BLOCKED because the local service launches exited with code 1 and no stable MySQL/Eureka stack was available.
 
 ## Public endpoint matrix
@@ -76,5 +75,5 @@ These are not public gateway endpoints and must be protected by service credenti
 ## Remaining verification blockers
 
 1. Start MySQL, Eureka, and all services with non-secret environment variables before running HTTP checks.
-2. Release the OneDrive/Java language-server lock on `common-security/target` and `frontend/node_modules` before repeating clean/npm-ci gates.
+2. Release the OneDrive/Java language-server lock on `common-security/target` before repeating clean Maven gates.
 3. Add MockMvc tests for controllers and focused business-rule tests for the services currently represented only by context tests.

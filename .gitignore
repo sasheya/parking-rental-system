@@ -12,11 +12,6 @@ target/
 *.iml
 .vscode/
 
-# Node/React
-node_modules/
-dist/
-build/
-
 # Env & secrets
 .env
 .env.*

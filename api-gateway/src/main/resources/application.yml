@@ -10,28 +10,34 @@ spring:
         routes:
           - id: auth-service
             uri: lb://auth-service
-            # uri: /api/auth/v3/api-docs
             predicates:
               - Path=/api/auth/**
+            filters:
+              - RewritePath=/api/auth/v3/api-docs, /v3/api-docs
           - id: user-service
             uri: lb://user-service
             predicates:
               - Path=/api/users/**, /api/vehicles/**
+            filters:
+              - RewritePath=/api/users/v3/api-docs, /v3/api-docs
           - id: parking-service
             uri: lb://parking-service
-            # uri: /api/parking/v3/api-docs
             predicates:
               - Path=/api/parking/**
+            filters:
+              - RewritePath=/api/parking/v3/api-docs, /v3/api-docs
           - id: booking-service
-            # uri: /api/booking/v3/api-docs
             uri: lb://booking-service
             predicates:
               - Path=/api/bookings/**
+            filters:
+              - RewritePath=/api/bookings/v3/api-docs, /v3/api-docs
           - id: payment-service
-            # uri: /api/payment/v3/api-docs
             uri: lb://payment-service
             predicates:
               - Path=/api/payments/**
+            filters:
+              - RewritePath=/api/payments/v3/api-docs, /v3/api-docs
 
 
 springdoc:
