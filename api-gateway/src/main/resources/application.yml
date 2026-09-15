@@ -6,38 +6,45 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      mvc:
-        routes:
-          - id: auth-service
-            uri: lb://auth-service
-            predicates:
-              - Path=/api/auth/**
-            filters:
-              - RewritePath=/api/auth/v3/api-docs, /v3/api-docs
-          - id: user-service
-            uri: lb://user-service
-            predicates:
-              - Path=/api/users/**, /api/vehicles/**
-            filters:
-              - RewritePath=/api/users/v3/api-docs, /v3/api-docs
-          - id: parking-service
-            uri: lb://parking-service
-            predicates:
-              - Path=/api/parking/**
-            filters:
-              - RewritePath=/api/parking/v3/api-docs, /v3/api-docs
-          - id: booking-service
-            uri: lb://booking-service
-            predicates:
-              - Path=/api/bookings/**
-            filters:
-              - RewritePath=/api/bookings/v3/api-docs, /v3/api-docs
-          - id: payment-service
-            uri: lb://payment-service
-            predicates:
-              - Path=/api/payments/**
-            filters:
-              - RewritePath=/api/payments/v3/api-docs, /v3/api-docs
+      server:
+        webmvc:
+          routes:
+            - id: auth-swagger
+              uri: lb://auth-service
+              predicates:
+                - Path=/api/auth/v3/api-docs
+              filters:
+                - RewritePath=/api/auth/v3/api-docs, /v3/api-docs
+            - id: auth-service
+              uri: lb://auth-service
+              predicates:
+                - Path=/api/auth/**
+              # filters:
+              #   - RewritePath=/api/auth/v3/api-docs, /v3/api-docs$
+            - id: user-service
+              uri: lb://user-service
+              predicates:
+                - Path=/api/users/**, /api/vehicles/**
+              filters:
+                - RewritePath=/api/users/v3/api-docs, /v3/api-docs
+            - id: parking-service
+              uri: lb://parking-service
+              predicates:
+                - Path=/api/parking/**
+              filters:
+                - RewritePath=/api/parking/v3/api-docs, /v3/api-docs
+            - id: booking-service
+              uri: lb://booking-service
+              predicates:
+                - Path=/api/bookings/**
+              filters:
+                - RewritePath=/api/bookings/v3/api-docs, /v3/api-docs
+            - id: payment-service
+              uri: lb://payment-service
+              predicates:
+                - Path=/api/payments/**
+              filters:
+                - RewritePath=/api/payments/v3/api-docs, /v3/api-docs
 
 
 springdoc:
@@ -63,3 +70,7 @@ eureka:
 
 jwt:
   public-key: ${JWT_PUBLIC_KEY:}
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
