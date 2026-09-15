@@ -26,6 +26,8 @@ import com.stripe.model.PaymentIntent;
 import com.stripe.net.Webhook;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.RefundCreateParams;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +51,9 @@ public class PaymentServiceImpl implements PaymentService {
     @Value("${internal.service-secret:}")
     private String internalServiceSecret;
 
+    @Value("${stripe.webhook-demo-mode:false}")
+    private boolean stripeWebhookDemoMode;
+
     @PostConstruct
     public void initStripe() {
         if (stripeSecretKey != null && !stripeSecretKey.isBlank()) {
@@ -70,7 +75,7 @@ public class PaymentServiceImpl implements PaymentService {
             throw new IllegalArgumentException("Payment amount does not match the booking amount");
         }
 
-        String currency = request.getCurrency() != null ? request.getCurrency().toLowerCase() : "usd";
+        String currency = request.getCurrency() != null ? request.getCurrency().toLowerCase() : "inr";
         long amountInCents = request.getAmount().multiply(BigDecimal.valueOf(100)).longValue();
 
         String paymentIntentId;
@@ -276,6 +281,21 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public void handleStripeEvent(String payload, String sigHeader) {
         try {
+
+            if(stripeWebhookDemoMode) {
+                ObjectMapper objectMapper = new ObjectMapper();
+                JsonNode root = objectMapper.readTree(payload);
+                String eventType = root.path("type").asText();
+                
+                if ("payment_intent.succeeded".equals(eventType)) {
+                    String paymentIntentId = root.path("data").path("object").path("id").asText();
+                    confirmPaymentInternal(paymentIntentId);
+                } else {
+                    log.info("Received Stripe event of type: {}", eventType);
+                }
+                return;
+            }
+
             Event event;
             if (stripeWebhookSecret == null || stripeWebhookSecret.isBlank()) {
                 throw new IllegalStateException("Stripe webhook secret is not configured");

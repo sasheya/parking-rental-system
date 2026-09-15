@@ -18,11 +18,11 @@ public interface ParkingServiceClient {
     List<AvailabilitySlotResponse> getAvailability(@PathVariable("spaceId") Long spaceId,
                                                    @RequestHeader("X-Internal-Secret") String secret);
 
-    @PutMapping("/api/parking/slots/{slotId}/mark-booked")
+    @PutMapping("/api/parking/internal/slots/{slotId}/mark-booked")
     void markBooked(@PathVariable("slotId") Long slotId,
                     @RequestHeader("X-Internal-Secret") String secret);
 
-    @PutMapping("/api/parking/slots/{slotId}/mark-unbooked")
+    @PutMapping("/api/parking/internal/slots/{slotId}/mark-unbooked")
     void markUnbooked(@PathVariable("slotId") Long slotId,
                       @RequestHeader("X-Internal-Secret") String secret);
 }

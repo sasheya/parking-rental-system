@@ -2,6 +2,7 @@ package com.parking.parking_service.controller;
 
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,6 +25,7 @@ import com.parking.parking_service.service.AvailabilityService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+@Slf4j 
 @RestController
 @RequestMapping("/api/parking")
 @RequiredArgsConstructor
@@ -78,15 +80,16 @@ public class AvailabilityController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
-    @PutMapping("/slots/{slotId}/mark-booked")
+    @PutMapping("/internal/slots/{slotId}/mark-booked")
     public ResponseEntity<Void> markBooked(@PathVariable("slotId") Long slotId,
                                            @RequestHeader("X-Internal-Secret") String secret) {
-        assertInternalSecret(secret);
+        log.info("Received secret =[{}], expected=[{}]", secret, internalServiceSecret);
+                                            assertInternalSecret(secret);
         availabilityService.updateSlotStatusInternal(slotId, true);
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/slots/{slotId}/mark-unbooked")
+    @PutMapping("/internal/slots/{slotId}/mark-unbooked")
     public ResponseEntity<Void> markUnbooked(@PathVariable("slotId") Long slotId,
                                              @RequestHeader("X-Internal-Secret") String secret) {
         assertInternalSecret(secret);

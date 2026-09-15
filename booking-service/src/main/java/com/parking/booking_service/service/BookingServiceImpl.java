@@ -76,7 +76,7 @@ public class BookingServiceImpl implements BookingService {
         if (!request.getStartTime().equals(slot.getStartTime()) || !request.getEndTime().equals(slot.getEndTime())) {
             throw new IllegalArgumentException("Booking time must match the selected availability slot");
         }
-
+        log.info("Calling parking-service with secret=[{}]", internalServiceSecret);
         parkingServiceClient.markBooked(request.getSlotId(), internalServiceSecret);
 
         long minutes = Duration.between(request.getStartTime(), request.getEndTime()).toMinutes();

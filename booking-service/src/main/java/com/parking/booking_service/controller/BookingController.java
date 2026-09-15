@@ -102,12 +102,12 @@ public class BookingController {
     }
 
     @PutMapping("/internal/{id}/status")
-    public ResponseEntity<Void> updateInternalStatus(@PathVariable Long id,
+    public ResponseEntity<ApiResponse<BookingResponse>> updateInternalStatus(@PathVariable Long id,
                                                       @RequestHeader("X-Internal-Secret") String secret,
                                                       @Valid @RequestBody BookingStatusUpdateRequest request) {
         assertInternalSecret(secret);
-        bookingService.updateBookingStatus(id, request);
-        return ResponseEntity.noContent().build();
+        BookingResponse response = bookingService.updateBookingStatus(id, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/{id}/cancel")
