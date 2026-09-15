@@ -1,0 +1,420 @@
+package com.parking.parking_service;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.security.access.AccessDeniedException;
+
+import com.parking.parking_service.dto.AvailabilitySlotDTO;
+import com.parking.parking_service.model.AvailabilitySlot;
+import com.parking.parking_service.model.ParkingSpace;
+import com.parking.parking_service.repository.AvailabilitySlotRepository;
+import com.parking.parking_service.repository.ParkingSpaceRepository;
+import com.parking.parking_service.service.AvailabilityServiceImpl;
+
+class AvailabilityServiceImplTest {
+
+    private AvailabilitySlotRepository slotRepository;
+    private ParkingSpaceRepository spaceRepository;
+    private AvailabilityServiceImpl service;
+
+    private final LocalDateTime start =
+            LocalDateTime.of(2026, 9, 16, 10, 0);
+
+    private final LocalDateTime end =
+            LocalDateTime.of(2026, 9, 16, 12, 0);
+
+    @BeforeEach
+    void setUp() {
+        slotRepository = mock(AvailabilitySlotRepository.class);
+        spaceRepository = mock(ParkingSpaceRepository.class);
+
+        service = new AvailabilityServiceImpl(
+                slotRepository,
+                spaceRepository);
+    }
+
+    private ParkingSpace space() {
+        return ParkingSpace.builder()
+                .id(1L)
+                .ownerId(10L)
+                .totalSlots(10)
+                .availableSlots(7)
+                .active(true)
+                .build();
+    }
+
+    private AvailabilitySlot slot(boolean booked) {
+        return AvailabilitySlot.builder()
+                .id(100L)
+                .parkingSpaceId(1L)
+                .startTime(start)
+                .endTime(end)
+                .isBooked(booked)
+                .build();
+    }
+
+    private AvailabilitySlotDTO dto() {
+        return AvailabilitySlotDTO.builder()
+                .startTime(start)
+                .endTime(end)
+                .build();
+    }
+
+    // ---------------------------------------------------------
+    // getSlotsBySpaceId
+    // ---------------------------------------------------------
+
+    @Test
+    void getSlotsBySpaceId_returnsMappedSlots() {
+        when(slotRepository.findByParkingSpaceId(1L))
+                .thenReturn(List.of(slot(false)));
+
+        List<AvailabilitySlotDTO> result =
+                service.getSlotsBySpaceId(1L);
+
+        assertEquals(1, result.size());
+        assertEquals(100L, result.get(0).getId());
+        assertEquals(1L, result.get(0).getParkingSpaceId());
+        assertEquals(start, result.get(0).getStartTime());
+        assertEquals(end, result.get(0).getEndTime());
+        assertEquals(Boolean.FALSE, result.get(0).getIsBooked());
+    }
+
+    @Test
+    void getSlotsBySpaceId_returnsEmptyList() {
+        when(slotRepository.findByParkingSpaceId(1L))
+                .thenReturn(List.of());
+
+        List<AvailabilitySlotDTO> result =
+                service.getSlotsBySpaceId(1L);
+
+        assertTrue(result.isEmpty());
+    }
+
+    // ---------------------------------------------------------
+    // createSlot
+    // ---------------------------------------------------------
+
+    @Test
+    void createSlot_createsSlotForOwner() {
+        ParkingSpace space = space();
+
+        when(spaceRepository.findById(1L))
+                .thenReturn(Optional.of(space));
+
+        when(slotRepository.save(any(AvailabilitySlot.class)))
+                .thenAnswer(invocation -> {
+                    AvailabilitySlot saved = invocation.getArgument(0);
+                    saved.setId(100L);
+                    return saved;
+                });
+
+        AvailabilitySlotDTO result =
+                service.createSlot(10L, 1L, dto());
+
+        assertEquals(100L, result.getId());
+        assertEquals(1L, result.getParkingSpaceId());
+        assertEquals(start, result.getStartTime());
+        assertEquals(end, result.getEndTime());
+        assertEquals(Boolean.FALSE, result.getIsBooked());
+
+        verify(slotRepository).save(any(AvailabilitySlot.class));
+    }
+
+    @Test
+    void createSlot_throwsWhenSpaceNotFound() {
+        when(spaceRepository.findById(99L))
+                .thenReturn(Optional.empty());
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.createSlot(10L, 99L, dto()));
+
+        assertEquals(
+                "Parking space not found with ID: 99",
+                exception.getMessage());
+
+        verify(slotRepository, never()).save(any());
+    }
+
+    @Test
+    void createSlot_throwsWhenOwnerDoesNotMatch() {
+        when(spaceRepository.findById(1L))
+                .thenReturn(Optional.of(space()));
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.createSlot(999L, 1L, dto()));
+
+        assertEquals(
+                "Unauthorized: parking space does not belong to the authenticated owner",
+                exception.getMessage());
+
+        verify(slotRepository, never()).save(any());
+    }
+
+    @Test
+    void createSlot_throwsWhenStartTimeIsNull() {
+        when(spaceRepository.findById(1L))
+                .thenReturn(Optional.of(space()));
+
+        AvailabilitySlotDTO request = dto();
+        request.setStartTime(null);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.createSlot(10L, 1L, request));
+
+        assertEquals(
+                "Availability end time must be after start time",
+                exception.getMessage());
+    }
+
+    @Test
+    void createSlot_throwsWhenEndTimeIsNull() {
+        when(spaceRepository.findById(1L))
+                .thenReturn(Optional.of(space()));
+
+        AvailabilitySlotDTO request = dto();
+        request.setEndTime(null);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.createSlot(10L, 1L, request));
+
+        assertEquals(
+                "Availability end time must be after start time",
+                exception.getMessage());
+    }
+
+    @Test
+    void createSlot_throwsWhenEndTimeIsBeforeStartTime() {
+        when(spaceRepository.findById(1L))
+                .thenReturn(Optional.of(space()));
+
+        AvailabilitySlotDTO request = dto();
+        request.setEndTime(start.minusHours(1));
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.createSlot(10L, 1L, request));
+
+        assertEquals(
+                "Availability end time must be after start time",
+                exception.getMessage());
+    }
+
+    // ---------------------------------------------------------
+    // updateSlotStatus
+    // ---------------------------------------------------------
+
+    @Test
+    void updateSlotStatus_updatesStatusForOwner() {
+        AvailabilitySlot existing = slot(false);
+
+        when(slotRepository.findById(100L))
+                .thenReturn(Optional.of(existing));
+
+        when(spaceRepository.findById(1L))
+                .thenReturn(Optional.of(space()));
+
+        service.updateSlotStatus(10L, 100L, true);
+
+        assertTrue(existing.getIsBooked());
+
+        verify(slotRepository).save(existing);
+    }
+
+    @Test
+    void updateSlotStatus_throwsWhenSlotNotFound() {
+        when(slotRepository.findById(100L))
+                .thenReturn(Optional.empty());
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.updateSlotStatus(10L, 100L, true));
+
+        assertEquals(
+                "Availability slot not found with ID: 100",
+                exception.getMessage());
+    }
+
+    @Test
+    void updateSlotStatus_throwsWhenSpaceNotFound() {
+        AvailabilitySlot existing = slot(false);
+
+        when(slotRepository.findById(100L))
+                .thenReturn(Optional.of(existing));
+
+        when(spaceRepository.findById(1L))
+                .thenReturn(Optional.empty());
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.updateSlotStatus(10L, 100L, true));
+
+        assertEquals(
+                "Parking space not found with ID: 1",
+                exception.getMessage());
+    }
+
+    @Test
+    void updateSlotStatus_throwsWhenOwnerDoesNotMatch() {
+        AvailabilitySlot existing = slot(false);
+
+        when(slotRepository.findById(100L))
+                .thenReturn(Optional.of(existing));
+
+        ParkingSpace parkingSpace = space();
+        parkingSpace.setOwnerId(999L);
+
+        when(spaceRepository.findById(1L))
+                .thenReturn(Optional.of(parkingSpace));
+
+        assertThrows(
+                AccessDeniedException.class,
+                () -> service.updateSlotStatus(10L, 100L, true));
+
+        verify(slotRepository, never()).save(any());
+    }
+
+    // ---------------------------------------------------------
+    // updateSlotStatusInternal
+    // ---------------------------------------------------------
+
+    @Test
+    void updateSlotStatusInternal_returnsWhenStatusAlreadyMatches() {
+        AvailabilitySlot existing = slot(true);
+
+        when(slotRepository.findById(100L))
+                .thenReturn(Optional.of(existing));
+
+        service.updateSlotStatusInternal(100L, true);
+
+        verify(slotRepository, never()).save(any());
+        verify(spaceRepository, never()).findById(any());
+    }
+
+    @Test
+    void updateSlotStatusInternal_bookedDecreasesAvailableSlots() {
+        AvailabilitySlot existing = slot(false);
+        ParkingSpace parkingSpace = space();
+
+        when(slotRepository.findById(100L))
+                .thenReturn(Optional.of(existing));
+
+        when(spaceRepository.findById(1L))
+                .thenReturn(Optional.of(parkingSpace));
+
+        when(slotRepository.save(any(AvailabilitySlot.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(spaceRepository.save(any(ParkingSpace.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.updateSlotStatusInternal(100L, true);
+
+        assertTrue(existing.getIsBooked());
+        assertEquals(6, parkingSpace.getAvailableSlots());
+
+        verify(slotRepository).save(existing);
+        verify(spaceRepository).save(parkingSpace);
+    }
+
+    @Test
+    void updateSlotStatusInternal_doesNotDecreaseBelowZero() {
+        AvailabilitySlot existing = slot(false);
+        ParkingSpace parkingSpace = space();
+        parkingSpace.setAvailableSlots(0);
+
+        when(slotRepository.findById(100L))
+                .thenReturn(Optional.of(existing));
+
+        when(spaceRepository.findById(1L))
+                .thenReturn(Optional.of(parkingSpace));
+
+        service.updateSlotStatusInternal(100L, true);
+
+        assertTrue(existing.getIsBooked());
+        assertEquals(0, parkingSpace.getAvailableSlots());
+    }
+
+    @Test
+    void updateSlotStatusInternal_unbookedIncreasesAvailableSlots() {
+        AvailabilitySlot existing = slot(true);
+        ParkingSpace parkingSpace = space();
+        parkingSpace.setAvailableSlots(5);
+        parkingSpace.setTotalSlots(10);
+
+        when(slotRepository.findById(100L))
+                .thenReturn(Optional.of(existing));
+
+        when(spaceRepository.findById(1L))
+                .thenReturn(Optional.of(parkingSpace));
+
+        service.updateSlotStatusInternal(100L, false);
+
+        assertFalse(existing.getIsBooked());
+        assertEquals(6, parkingSpace.getAvailableSlots());
+    }
+
+    @Test
+    void updateSlotStatusInternal_doesNotIncreaseAboveTotalSlots() {
+        AvailabilitySlot existing = slot(true);
+        ParkingSpace parkingSpace = space();
+        parkingSpace.setAvailableSlots(10);
+        parkingSpace.setTotalSlots(10);
+
+        when(slotRepository.findById(100L))
+                .thenReturn(Optional.of(existing));
+
+        when(spaceRepository.findById(1L))
+                .thenReturn(Optional.of(parkingSpace));
+
+        service.updateSlotStatusInternal(100L, false);
+
+        assertFalse(existing.getIsBooked());
+        assertEquals(10, parkingSpace.getAvailableSlots());
+    }
+
+    @Test
+    void updateSlotStatusInternal_handlesMissingParkingSpace() {
+        AvailabilitySlot existing = slot(false);
+
+        when(slotRepository.findById(100L))
+                .thenReturn(Optional.of(existing));
+
+        when(spaceRepository.findById(1L))
+                .thenReturn(Optional.empty());
+
+        service.updateSlotStatusInternal(100L, true);
+
+        assertTrue(existing.getIsBooked());
+
+        verify(slotRepository).save(existing);
+        verify(spaceRepository).findById(1L);
+        verify(spaceRepository, never()).save(any());
+    }
+
+    @Test
+    void updateSlotStatusInternal_throwsWhenSlotNotFound() {
+        when(slotRepository.findById(100L))
+                .thenReturn(Optional.empty());
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.updateSlotStatusInternal(100L, true));
+
+        assertEquals(
+                "Availability slot not found with ID: 100",
+                exception.getMessage());
+    }
+}
